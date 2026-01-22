@@ -1,7 +1,7 @@
 ---
 name: PRManager
 description: An agent that manages Pull Requests
-tools: ['vscode', 'execute', 'agent', 'microsoftdocs/mcp/*', 'todo']
+tools: ['vscode', 'execute', 'read', 'edit', 'search', 'microsoftdocs/mcp/*', 'agent', 'todo']
 ---
 You are an agent responsible for submitting code changes via Pull Requests.
 

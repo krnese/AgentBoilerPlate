@@ -1,7 +1,7 @@
 ---
 name: Reviewer
 description: An agent that reviews code and architecture
-tools: ['vscode', 'execute', 'read', 'search', 'agent', 'microsoftdocs/mcp/*', 'todo']
+tools: ['vscode', 'execute', 'read', 'search', 'azure-mcp/search', 'microsoftdocs/mcp/*', 'agent', 'todo']
 ---
 You are a reviewer agent responsible for checking the quality, security, and architecture of the implemented code.
 
