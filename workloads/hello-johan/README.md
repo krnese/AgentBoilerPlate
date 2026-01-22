@@ -10,7 +10,7 @@ workloads/hello-johan/
 ├── infra/              # Infrastructure as Code (Bicep)
 │   ├── main.bicep      # Subscription-level entry point
 │   ├── app.bicep       # App Service resources definitions (invoked by main)
-│   └── main.json       # (Optional) Parameter parameters or build artifacts
+│   └── main.json       # (Optional) Compiled ARM template generated from main.bicep
 ├── src/                # Application source code
 │   ├── server.js       # Main Node.js server
 │   └── package.json    # Application metadata and scripts
