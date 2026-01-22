@@ -7,7 +7,7 @@ This plan outlines the steps to build, validate, and deploy a simple "Hello Joha
 - **Region**: `swedencentral` (Sweden Central)
 - **Stack**: Node.js (Version 20 LTS recommended)
 - **OS**: Linux
-- **Compute**: App Service Plan (SKU: F1 Free or B1 Basic for dev/test)
+- **Compute**: App Service Plan (SKU: F1 Free for dev/test)
 - **Resource Group**: `rg-hello-johan-swc`
 
 ## Steps
@@ -22,7 +22,7 @@ This plan outlines the steps to build, validate, and deploy a simple "Hello Joha
 1.  Create `infra/main.bicep`.
 2.  Define `Microsoft.Web/serverfarms` (App Service Plan).
 3.  Define `Microsoft.Web/sites` (Web App).
-4.  Ensure `webServerFarms` location is set to `swedencentral`.
+4.  Ensure `serverfarms` location is set to `swedencentral`.
 
 ### Phase 3: Deployment Automation
 1.  Create `deploy.sh` script.
