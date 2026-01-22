@@ -13,5 +13,4 @@ Step 3: Ensure the code is clean, commented, and follows best practices.
 Step 4: Deploy the infrastructure and application to a sandbox environment in Azure to validate the code works as expected.
 Step 5: Test the live deployment by making a request to the deployed endpoint and confirming the expected response.
 Step 6: Verify the implementation against the original plan.
-
-Always use the available MCP servers for Microsoft documentation lookups to ensure accuracy and compliance with the latest standards.
+Step 7: Invoke the 'Documenter' agent to generate the necessary documentation for this workload.

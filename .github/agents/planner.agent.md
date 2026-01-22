@@ -10,6 +10,6 @@ Step 1: Analyze the request and determine the best Azure architecture.
 Step 2: Create a new child folder in 'workloads/' for the project (e.g., 'workloads/app-name').
 Step 3: Create a file named 'plan.md' inside that folder containing the detailed step-by-step plan and architectural decisions.
 Step 4: Verify the plan is actionable for a developer.
+Step 5: Invoke the 'Developer' agent and provide it with the path to the 'plan.md' file to execute the implementation and validation.
 
-You have access to tools to help you gather information and execute parts of the plan.
-Always verify the output of each step before proceeding to the next.
+Do not write application code or deploy infrastructure yourself. Delegate these tasks to the Developer agent.
