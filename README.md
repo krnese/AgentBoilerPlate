@@ -26,15 +26,18 @@ Stop writing boilerplate infrastructure code. Start delivering value.
 
 ## 🤖 The Agent Team
 
-This repository comes pre-configured with a team of specialized agents:
+This repository comes pre-configured with a team of specialized agents that work sequentially:
 
-1.  **Planner:** Architects the solution and breaks it down into actionable steps.
+1.  **Planner:** Architects the solution, breaks it down into actionable steps, and creates the implementation plan.
     *   *Tools:* `azure-mcp/search` (Azure Resource Graph), Web Search.
-2.  **Developer:** Implements the application code and Infrastructure as Code (Bicep). *Now supports auto-deployment and validation!*
+2.  **Developer:** Implements the application code and Infrastructure as Code (Bicep), deploys to Azure, and validates the live deployment.
     *   *Tools:* `microsoftdocs/mcp/*` (Access to MS Learn), `bicep-experim/*` (Bicep Best Practices), `azure-mcp/*` (Deployment).
-3.  **Reviewer:** Audits the code for security, architecture, and best practices.
-4.  **PRManager:** Automates the git workflow, creating branches and Pull Requests.
-5.  **Documenter:** Generates comprehensive documentation (`README.md`) for your new workload.
+3.  **Documenter:** Generates comprehensive documentation (`README.md`) for the new workload, ensuring accurate terminology.
+    *   *Tools:* `microsoftdocs/mcp/*` (Terminology Check).
+4.  **PRManager:** Automates the git workflow, creating branches, pushing code, and opening Pull Requests.
+    *   *Tools:* `microsoftdocs/mcp/*` (Git Best Practices).
+5.  **Reviewer:** Audits the code for security and architecture against MS Learn benchmarks, posts comments directly to the PR, and approves changes.
+    *   *Tools:* `microsoftdocs/mcp/*` (Security Benchmarks), `gh` (GitHub CLI).
 
 ## 🛠️ Getting Started
 
@@ -42,6 +45,7 @@ This repository comes pre-configured with a team of specialized agents:
 *   **Visual Studio Code**
 *   **GitHub Copilot** (with Chat extension)
 *   **Azure CLI** (`az login`)
+*   **GitHub CLI** (`gh auth login`) - *Required for PR management*
 *   **Git**
 
 ### Installation
@@ -66,17 +70,17 @@ This repository comes pre-configured with a team of specialized agents:
 
 ## 📦 Project Structure
 
-*   `agents/`: Definitions for the AI agents (prompts, tools, and personas).
+*   `.github/agents/`: Definitions for the AI agents (prompts, tools, and personas).
 *   `workloads/`: The workspace where your new projects will be generated.
 *   `.github/`: CI/CD workflows and configuration.
 
 ## ➕ Adding New Agents
 
-The framework is designed to be extensible. To add a specialized agent (e.g., a "Security Auditor" or "Database Admin"), simply create a new file in the `agents/` directory.
+The framework is designed to be extensible. To add a specialized agent (e.g., a "Security Auditor" or "Database Admin"), simply create a new file in the `.github/agents/` directory.
 
 ### Example: Creating a `Tester` Agent
 
-1.  Create a file named `agents/tester.agent.md`.
+1.  Create a file named `.github/agents/tester.agent.md`.
 2.  Add the following definition:
 
     ```markdown
