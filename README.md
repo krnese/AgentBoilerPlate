@@ -78,7 +78,8 @@ This repository comes pre-configured with a team of specialized agents that work
 
 ## 📦 Project Structure
 
-*   `.github/agents/`: Definitions for the AI agents (prompts, tools, and personas).
+*   `.github/agents/`: Definitions for the AI agents (prompts, tools, and personas). [Learn more](.github/agents/README.md)
+*   `.github/prompts/`: Reusable prompt files for common Azure deployment scenarios. [Learn more](.github/prompts/README.md)
 *   `workloads/`: The workspace where your new projects will be generated.
 *   `.github/`: CI/CD workflows and configuration.
 
