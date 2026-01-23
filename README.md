@@ -29,7 +29,7 @@ Stop writing boilerplate infrastructure code. Start delivering value.
 This repository comes pre-configured with a team of specialized agents that work sequentially:
 
 1.  **Planner:** Architects the solution, breaks it down into actionable steps, and creates the implementation plan.
-    *   *Tools:* `azure-mcp/search` (Azure Resource Graph), Web Search.
+    *   *Tools:* `microsoftdocs/mcp/*` (Azure Resource Graph), Web Search.
 2.  **Developer:** Implements the application code and Infrastructure as Code (Bicep), deploys to Azure, and validates the live deployment.
     *   *Tools:* `microsoftdocs/mcp/*` (Access to MS Learn), `bicep-experim/*` (Bicep Best Practices), `azure-mcp/*` (Deployment).
 3.  **Documenter:** Generates comprehensive documentation (`README.md`) for the new workload, ensuring accurate terminology.
@@ -46,6 +46,7 @@ This repository comes pre-configured with a team of specialized agents that work
 *   **GitHub Copilot** (with Chat extension)
 *   **Azure CLI** (`az login`)
 *   **GitHub CLI** (`gh auth login`) - *Required for PR management*
+*   **Node.js 18+** - *Required for MCP servers*
 *   **Git**
 
 ### Installation
@@ -56,13 +57,20 @@ This repository comes pre-configured with a team of specialized agents that work
     cd AgentBoilerPlate
     ```
 
-2.  **Sign in to Azure**
+2.  **Configure MCP Servers**
+    This repository includes a `.vscode/mcp.json` configuration file for the Azure Resource Graph MCP server.
+    
+    *   Open `.vscode/mcp.json`.
+    *   Replace the `AZURE_SUBSCRIPTION_ID` value with your actual subscription ID (run `az account show --query id -o tsv` to find it).
+    *   Restart VS Code or reload the window to apply the changes.
+
+3.  **Sign in to Azure**
     Open the integrated terminal in VS Code and log in:
     ```bash
     az login
     ```
 
-3.  **Start Developing**
+4.  **Start Developing**
     Open the GitHub Copilot Chat in VS Code and invoke an agent or simply describe your intent.
 
     > **Example Prompt:**

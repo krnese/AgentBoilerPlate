@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "azure-resource-graph": {
+      "command": "npx",
+      "args": ["-y", "@krnese/azure-resource-graph-mcp@latest"],
+      "env": {
+        "AZURE_SUBSCRIPTION_ID": "fcbf5e04-699b-436a-88ef-d72081f7ad52"
+      }
+    }
+  }
+}
