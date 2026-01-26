@@ -6,6 +6,10 @@
       "env": {
         "AZURE_SUBSCRIPTION_ID": "fcbf5e04-699b-436a-88ef-d72081f7ad52"
       }
+    },
+    "microsoftdocs": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-microsoft-docs@latest"]
     }
   }
 }
