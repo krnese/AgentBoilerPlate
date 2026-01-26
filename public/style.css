@@ -128,6 +128,34 @@ select:hover {
   border: 1px solid #30363d;
   align-self: flex-start;
   border-bottom-left-radius: 4px;
+  white-space: normal;
+}
+
+/* Markdown styling for assistant messages */
+.message.assistant h1, 
+.message.assistant h2, 
+.message.assistant h3, 
+.message.assistant h4 {
+  margin: 16px 0 8px 0;
+  color: #f0f6fc;
+}
+
+.message.assistant h1 { font-size: 1.5em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+.message.assistant h2 { font-size: 1.3em; }
+.message.assistant h3 { font-size: 1.1em; }
+
+.message.assistant p {
+  margin: 8px 0;
+}
+
+.message.assistant ul, 
+.message.assistant ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.message.assistant li {
+  margin: 4px 0;
 }
 
 .message.assistant pre {
@@ -135,12 +163,66 @@ select:hover {
   padding: 12px;
   border-radius: 6px;
   overflow-x: auto;
-  margin: 8px 0;
+  margin: 12px 0;
+  border: 1px solid #30363d;
 }
 
 .message.assistant code {
-  font-family: 'Fira Code', 'Consolas', monospace;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
   font-size: 0.9em;
+}
+
+.message.assistant pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.message.assistant :not(pre) > code {
+  background: #161b22;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #30363d;
+}
+
+.message.assistant blockquote {
+  border-left: 3px solid #58a6ff;
+  padding-left: 12px;
+  margin: 12px 0;
+  color: #8b949e;
+}
+
+.message.assistant a {
+  color: #58a6ff;
+  text-decoration: none;
+}
+
+.message.assistant a:hover {
+  text-decoration: underline;
+}
+
+.message.assistant table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  width: 100%;
+}
+
+.message.assistant th,
+.message.assistant td {
+  border: 1px solid #30363d;
+  padding: 8px;
+  text-align: left;
+}
+
+.message.assistant th {
+  background: #161b22;
+  font-weight: 600;
+}
+
+.message.assistant hr {
+  border: none;
+  border-top: 1px solid #30363d;
+  margin: 16px 0;
 }
 
 .message.system {

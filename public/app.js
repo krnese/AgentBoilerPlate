@@ -110,14 +110,25 @@ class CopilotChat {
       case "delta":
         if (!this.currentAssistantMsg) {
           this.currentAssistantMsg = this.addMessage("", "assistant");
+          this.currentAssistantMsg.dataset.rawContent = "";
         }
-        this.currentAssistantMsg.textContent += msg.content;
+        // Accumulate raw content and re-render as markdown
+        this.currentAssistantMsg.dataset.rawContent += msg.content;
+        if (typeof marked !== "undefined") {
+          this.currentAssistantMsg.innerHTML = marked.parse(this.currentAssistantMsg.dataset.rawContent);
+        } else {
+          this.currentAssistantMsg.textContent = this.currentAssistantMsg.dataset.rawContent;
+        }
         this.scrollToBottom();
         break;
 
       case "message":
         if (this.currentAssistantMsg) {
-          this.currentAssistantMsg.textContent = msg.content;
+          if (typeof marked !== "undefined") {
+            this.currentAssistantMsg.innerHTML = marked.parse(msg.content);
+          } else {
+            this.currentAssistantMsg.textContent = msg.content;
+          }
         } else {
           this.addMessage(msg.content, "assistant");
         }
@@ -239,7 +250,12 @@ class CopilotChat {
   addMessage(content, role) {
     const div = document.createElement("div");
     div.className = `message ${role}`;
-    div.textContent = content;
+    // Render markdown for assistant messages, plain text for user messages
+    if (role === "assistant" && typeof marked !== "undefined") {
+      div.innerHTML = marked.parse(content);
+    } else {
+      div.textContent = content;
+    }
     this.messagesEl.appendChild(div);
     this.scrollToBottom();
     return div;
