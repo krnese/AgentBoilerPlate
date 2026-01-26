@@ -66,18 +66,21 @@ wss.on("connection", async (ws) => {
             streaming: true,
           };
           
-          // Inject agent instructions as system prompt
+          // Inject agent instructions as system message
           if (agent) {
             console.log(`Applying agent: ${agent.name}`);
             console.log(`System prompt preview: ${agent.instructions.substring(0, 200)}...`);
-            // Use the full agent instructions as the system prompt with strong framing
-            sessionConfig.systemPrompt = `<role>
+            // Use the full agent instructions as the system message with strong framing
+            sessionConfig.systemMessage = {
+              mode: "replace",
+              content: `<role>
 ${agent.instructions}
 </role>
 
-You are ONLY acting as the agent described above. Follow the steps and instructions precisely. Do not mention that you are GitHub Copilot unless specifically asked about your underlying model.`;
+You are ONLY acting as the agent described above. Follow the steps and instructions precisely. Do not mention that you are GitHub Copilot unless specifically asked about your underlying model.`
+            };
           } else if (agentId) {
-            console.log('No agent system prompt applied (General Chat mode)');
+            console.log('No agent system message applied (General Chat mode)');
           }
           
           session = await client.createSession(sessionConfig);

@@ -248,7 +248,12 @@ class CopilotChat {
   addSystemMessage(content) {
     const div = document.createElement("div");
     div.className = "message system";
-    div.textContent = content;
+    // Use innerHTML if content contains HTML tags, otherwise use textContent
+    if (content.includes('<')) {
+      div.innerHTML = content;
+    } else {
+      div.textContent = content;
+    }
     this.messagesEl.appendChild(div);
     this.scrollToBottom();
   }
