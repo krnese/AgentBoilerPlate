@@ -91,12 +91,16 @@ You are ONLY acting as the agent described above. Follow the steps and instructi
               ws.send(JSON.stringify({ type: "delta", content: event.data.deltaContent }));
             } else if (event.type === "assistant.message") {
               ws.send(JSON.stringify({ type: "message", content: event.data.content }));
+            } else if (event.type === "assistant.reasoning_delta") {
+              ws.send(JSON.stringify({ type: "reasoning_delta", content: event.data.deltaContent, reasoningId: event.data.reasoningId }));
+            } else if (event.type === "assistant.reasoning") {
+              ws.send(JSON.stringify({ type: "reasoning", content: event.data.content, reasoningId: event.data.reasoningId }));
             } else if (event.type === "session.idle") {
               ws.send(JSON.stringify({ type: "idle" }));
             } else if (event.type === "tool.execution_start") {
-              ws.send(JSON.stringify({ type: "tool_start", tool: event.data.name }));
+              ws.send(JSON.stringify({ type: "tool_start", tool: event.data.toolName }));
             } else if (event.type === "tool.execution_end") {
-              ws.send(JSON.stringify({ type: "tool_end", tool: event.data.name }));
+              ws.send(JSON.stringify({ type: "tool_end", tool: event.data.toolName }));
             }
           });
 

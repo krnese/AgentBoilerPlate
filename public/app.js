@@ -3,6 +3,7 @@ class CopilotChat {
     this.ws = null;
     this.isProcessing = false;
     this.currentAssistantMsg = null;
+    this.currentThinkingMsg = null;
     this.attachments = [];
     this.agents = [];
 
@@ -107,6 +108,21 @@ class CopilotChat {
         this.setProcessing(false);
         break;
 
+      case "reasoning_delta":
+        if (!this.currentThinkingMsg) {
+          this.currentThinkingMsg = this.addThinkingMessage("");
+        }
+        this.currentThinkingMsg.querySelector('.thinking-content').textContent += msg.content;
+        this.scrollToBottom();
+        break;
+
+      case "reasoning":
+        if (this.currentThinkingMsg) {
+          this.currentThinkingMsg.querySelector('.thinking-content').textContent = msg.content;
+        }
+        this.currentThinkingMsg = null;
+        break;
+
       case "delta":
         if (!this.currentAssistantMsg) {
           this.currentAssistantMsg = this.addMessage("", "assistant");
@@ -168,6 +184,7 @@ class CopilotChat {
     
     // Reset client state
     this.currentAssistantMsg = null;
+    this.currentThinkingMsg = null;
     this.isProcessing = false;
     this.setProcessing(false);
     
@@ -272,6 +289,20 @@ class CopilotChat {
     }
     this.messagesEl.appendChild(div);
     this.scrollToBottom();
+  }
+
+  addThinkingMessage(content) {
+    const div = document.createElement("div");
+    div.className = "message thinking";
+    div.innerHTML = `
+      <details open>
+        <summary>💭 Thinking...</summary>
+        <div class="thinking-content">${content}</div>
+      </details>
+    `;
+    this.messagesEl.appendChild(div);
+    this.scrollToBottom();
+    return div;
   }
 
   showToolIndicator(toolName, isStart) {
