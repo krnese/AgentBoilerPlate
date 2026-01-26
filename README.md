@@ -43,10 +43,10 @@ This repository comes pre-configured with a team of specialized agents that work
 
 ### Prerequisites
 *   **Visual Studio Code**
-*   **GitHub Copilot** (with Chat extension)
+*   **GitHub Copilot** (with Chat extension and active subscription)
 *   **Azure CLI** (`az login`)
 *   **GitHub CLI** (`gh auth login`) - *Required for PR management*
-*   **Node.js 18+** - *Required for MCP servers*
+*   **Node.js 18+** - *Required for MCP servers and local web UI*
 *   **Git**
 
 ### Installation
@@ -57,31 +57,65 @@ This repository comes pre-configured with a team of specialized agents that work
     cd AgentBoilerPlate
     ```
 
-2.  **Configure MCP Servers**
+2.  **Install Dependencies**
+    Install the required npm packages including GitHub Copilot SDK:
+    ```bash
+    npm install
+    ```
+
+3.  **Configure MCP Servers**
     This repository includes a `.vscode/mcp.json` configuration file for the Azure Resource Graph MCP server.
     
     *   Open `.vscode/mcp.json`.
     *   Replace the `AZURE_SUBSCRIPTION_ID` value with your actual subscription ID (run `az account show --query id -o tsv` to find it).
     *   Restart VS Code or reload the window to apply the changes.
 
-3.  **Sign in to Azure**
-    Open the integrated terminal in VS Code and log in:
+4.  **Sign in to Azure & GitHub**
+    Open the integrated terminal in VS Code and authenticate:
     ```bash
     az login
+    gh auth login
     ```
 
-4.  **Start Developing**
-    Open the GitHub Copilot Chat in VS Code and invoke an agent or simply describe your intent.
+5.  **Start the Local Web UI (Optional)**
+    Launch the interactive chat interface to work with agents via web browser:
+    ```bash
+    npm start
+    ```
+    
+    Then open your browser to: **http://localhost:3000**
+    
+    The web UI provides:
+    - Real-time streaming responses from AI agents
+    - File attachment support for context
+    - Model selection (Claude Sonnet 4.5, GPT-5, etc.)
+    - Agent-specific sessions with specialized instructions
+    
+    For development with auto-reload:
+    ```bash
+    npm run dev
+    ```
 
+6.  **Start Developing**
+    **Option A - VS Code Copilot Chat:**
+    Open the GitHub Copilot Chat panel in VS Code and invoke an agent:
+    
     > **Example Prompt:**
     > *"@Planner Plan a new python function app in West Europe that processes blob storage events."*
+    
+    **Option B - Local Web UI:**
+    Use the web interface at http://localhost:3000 to interact with agents via a chat interface.
 
 ## 📦 Project Structure
 
 *   `.github/agents/`: Definitions for the AI agents (prompts, tools, and personas). [Learn more](.github/agents/README.md)
 *   `.github/prompts/`: Reusable prompt files for common Azure deployment scenarios. [Learn more](.github/prompts/README.md)
-*   `workloads/`: The workspace where your new projects will be generated.
-*   `.github/`: CI/CD workflows and configuration.
+*   `.vscode/mcp.json`: MCP server configuration for Azure Resource Graph integration
+*   `workloads/`: The workspace where your new projects will be generated
+*   `public/`: Web UI frontend (HTML, CSS, JavaScript)
+*   `server.js`: Express server with WebSocket support for real-time agent interactions
+*   `agentLoader.js`: Dynamic agent loader that reads agent definitions from `.github/agents/`
+*   `package.json`: Node.js dependencies including GitHub Copilot SDK
 
 ## ➕ Adding New Agents
 
