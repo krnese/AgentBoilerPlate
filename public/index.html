@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Development Chat</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -15,10 +16,7 @@
           <option value="">General Chat</option>
         </select>
         <select id="model-select">
-          <option value="claude-sonnet-4.5">Claude Sonnet 4.5</option>
-          <option value="claude-sonnet-4">Claude Sonnet 4</option>
-          <option value="gpt-5">GPT-5</option>
-          <option value="gpt-5-mini">GPT-5 Mini</option>
+          <option value="claude-sonnet-4.5">Loading models...</option>
         </select>
         <button id="new-session" class="btn secondary">New Session</button>
       </div>

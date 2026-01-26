@@ -3,6 +3,7 @@ class CopilotChat {
     this.ws = null;
     this.isProcessing = false;
     this.currentAssistantMsg = null;
+    this.currentThinkingMsg = null;
     this.attachments = [];
     this.agents = [];
 
@@ -24,6 +25,7 @@ class CopilotChat {
 
   init() {
     this.loadAgents();
+    this.loadModels();
     this.formEl.addEventListener("submit", (e) => this.handleSubmit(e));
     this.newSessionBtn.addEventListener("click", () => this.createSession());
     this.abortBtn.addEventListener("click", () => this.abort());
@@ -75,6 +77,28 @@ class CopilotChat {
     return this.agentsLoaded;
   }
 
+  async loadModels() {
+    try {
+      const response = await fetch("/api/models");
+      const models = await response.json();
+      
+      // Clear existing options except the first (if any)
+      this.modelSelect.innerHTML = '';
+      
+      // Populate model select
+      models.forEach(model => {
+        const option = document.createElement("option");
+        option.value = model.id;
+        option.textContent = model.name;
+        this.modelSelect.appendChild(option);
+      });
+      console.log(`Loaded ${models.length} models:`, models.map(m => m.name).join(', '));
+    } catch (error) {
+      console.error("Failed to load models:", error);
+      // Keep hardcoded fallbacks if API fails
+    }
+  }
+
   connect() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     this.ws = new WebSocket(`${protocol}//${window.location.host}`);
@@ -107,17 +131,39 @@ class CopilotChat {
         this.setProcessing(false);
         break;
 
+      case "reasoning_delta":
+        if (!this.currentThinkingMsg) {
+          this.currentThinkingMsg = this.addThinkingMessage("");
+        }
+        this.currentThinkingMsg.querySelector('.thinking-content').textContent += msg.content;
+        this.scrollToBottom();
+        break;
+
+      case "reasoning":
+        if (this.currentThinkingMsg) {
+          this.currentThinkingMsg.querySelector('.thinking-content').textContent = msg.content;
+        }
+        this.currentThinkingMsg = null;
+        break;
+
       case "delta":
         if (!this.currentAssistantMsg) {
           this.currentAssistantMsg = this.addMessage("", "assistant");
+          this.currentAssistantMsg.dataset.markdown = "";
+          this.currentAssistantMsg.dataset.streaming = "true";
         }
-        this.currentAssistantMsg.textContent += msg.content;
+        // During streaming, just append text content (no parsing)
+        this.currentAssistantMsg.dataset.markdown += msg.content;
+        this.currentAssistantMsg.textContent = this.currentAssistantMsg.dataset.markdown;
         this.scrollToBottom();
         break;
 
       case "message":
         if (this.currentAssistantMsg) {
-          this.currentAssistantMsg.textContent = msg.content;
+          this.currentAssistantMsg.dataset.markdown = msg.content;
+          // Parse markdown when message is complete
+          delete this.currentAssistantMsg.dataset.streaming;
+          this.currentAssistantMsg.innerHTML = marked.parse(msg.content);
         } else {
           this.addMessage(msg.content, "assistant");
         }
@@ -132,6 +178,12 @@ class CopilotChat {
         break;
 
       case "idle":
+        // Parse markdown when streaming is complete
+        if (this.currentAssistantMsg && this.currentAssistantMsg.dataset.streaming) {
+          delete this.currentAssistantMsg.dataset.streaming;
+          const markdown = this.currentAssistantMsg.dataset.markdown;
+          this.currentAssistantMsg.innerHTML = marked.parse(markdown);
+        }
         this.setProcessing(false);
         this.currentAssistantMsg = null;
         break;
@@ -157,6 +209,7 @@ class CopilotChat {
     
     // Reset client state
     this.currentAssistantMsg = null;
+    this.currentThinkingMsg = null;
     this.isProcessing = false;
     this.setProcessing(false);
     
@@ -239,7 +292,26 @@ class CopilotChat {
   addMessage(content, role) {
     const div = document.createElement("div");
     div.className = `message ${role}`;
-    div.textContent = content;
+    if (role === "assistant") {
+      div.dataset.markdown = content;
+      div.innerHTML = marked.parse(content);
+    } else {
+      div.textContent = content;
+    }
+    this.messagesEl.appendChild(div);
+    this.scrollToBottom();
+    return div;
+  }
+
+  addThinkingMessage(content) {
+    const div = document.createElement("div");
+    div.className = "message thinking";
+    div.innerHTML = `
+      <details open>
+        <summary>💭 Thinking...</summary>
+        <div class="thinking-content">${content}</div>
+      </details>
+    `;
     this.messagesEl.appendChild(div);
     this.scrollToBottom();
     return div;
@@ -259,10 +331,15 @@ class CopilotChat {
   }
 
   showToolIndicator(toolName, isStart) {
-    if (isStart && this.currentAssistantMsg) {
+    if (isStart) {
+      // Create assistant message if it doesn't exist yet
+      if (!this.currentAssistantMsg) {
+        this.currentAssistantMsg = this.addMessage("", "assistant");
+        this.currentAssistantMsg.dataset.markdown = "";
+      }
       const indicator = document.createElement("div");
       indicator.className = "tool-indicator";
-      indicator.textContent = `🔧 Using: ${toolName}`;
+      indicator.textContent = `🔧 Using: ${toolName || 'tool'}`;
       indicator.id = `tool-${toolName}`;
       this.currentAssistantMsg.appendChild(indicator);
     }

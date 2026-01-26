@@ -52,7 +52,7 @@ wss.on("connection", async (ws) => {
           }
           
           // Get agent configuration if specified
-          const agentId = msg.agent;
+          const agentId = msg.agent && msg.agent.trim() !== "" ? msg.agent : null;
           const agent = agentId ? agents[agentId] : null;
           
           // Debug logging
@@ -91,12 +91,16 @@ You are ONLY acting as the agent described above. Follow the steps and instructi
               ws.send(JSON.stringify({ type: "delta", content: event.data.deltaContent }));
             } else if (event.type === "assistant.message") {
               ws.send(JSON.stringify({ type: "message", content: event.data.content }));
+            } else if (event.type === "assistant.reasoning_delta") {
+              ws.send(JSON.stringify({ type: "reasoning_delta", content: event.data.deltaContent, reasoningId: event.data.reasoningId }));
+            } else if (event.type === "assistant.reasoning") {
+              ws.send(JSON.stringify({ type: "reasoning", content: event.data.content, reasoningId: event.data.reasoningId }));
             } else if (event.type === "session.idle") {
               ws.send(JSON.stringify({ type: "idle" }));
             } else if (event.type === "tool.execution_start") {
-              ws.send(JSON.stringify({ type: "tool_start", tool: event.data.name }));
+              ws.send(JSON.stringify({ type: "tool_start", tool: event.data.toolName }));
             } else if (event.type === "tool.execution_end") {
-              ws.send(JSON.stringify({ type: "tool_end", tool: event.data.name }));
+              ws.send(JSON.stringify({ type: "tool_end", tool: event.data.toolName }));
             }
           });
 
@@ -170,6 +174,18 @@ app.get("/api/agents", (req, res) => {
     description: a.description
   }));
   res.json(agentList);
+});
+
+// API endpoint to get available models
+app.get("/api/models", async (req, res) => {
+  try {
+    await initClient();
+    const models = await client.listModels();
+    res.json(models);
+  } catch (error) {
+    console.error("Failed to fetch models:", error);
+    res.status(500).json({ error: "Failed to fetch models" });
+  }
 });
 
 // Cleanup uploads on exit

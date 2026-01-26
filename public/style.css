@@ -151,6 +151,40 @@ select:hover {
   padding: 8px 12px;
 }
 
+.message.thinking {
+  background: #1f2937;
+  border: 1px solid #374151;
+  align-self: flex-start;
+  max-width: 85%;
+  border-bottom-left-radius: 4px;
+}
+
+.message.thinking details {
+  cursor: pointer;
+}
+
+.message.thinking summary {
+  font-weight: 600;
+  color: #9ca3af;
+  padding: 4px 0;
+  user-select: none;
+  list-style-position: inside;
+}
+
+.message.thinking summary:hover {
+  color: #c9d1d9;
+}
+
+.message.thinking .thinking-content {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #374151;
+  color: #9ca3af;
+  font-size: 0.9em;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  white-space: pre-wrap;
+}
+
 .message .tool-indicator {
   display: inline-block;
   background: #30363d;
