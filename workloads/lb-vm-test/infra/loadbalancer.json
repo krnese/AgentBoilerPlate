@@ -1,0 +1,213 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "18415742590275236900"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for load balancer resources"
+      }
+    },
+    "workloadName": {
+      "type": "string",
+      "metadata": {
+        "description": "Workload name for resource naming"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment name for resource naming"
+      }
+    },
+    "vmCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VMs in backend pool (for outbound SNAT port calculation)"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "metadata": {
+        "description": "Resource tags"
+      }
+    }
+  },
+  "variables": {
+    "publicIpName": "[format('pip-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+    "loadBalancerName": "[format('lb-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+    "frontendIpConfigName": "frontend-ip",
+    "backendPoolName": "backend-pool",
+    "healthProbeName": "health-probe-http",
+    "loadBalancingRuleName": "lb-rule-http",
+    "outboundRuleName": "outbound-rule",
+    "outboundPortsPerInstance": 1024
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "publicIPAddressVersion": "IPv4",
+        "idleTimeoutInMinutes": 4,
+        "dnsSettings": {
+          "domainNameLabel": "[format('{0}-{1}-{2}', parameters('workloadName'), parameters('environment'), uniqueString(resourceGroup().id))]"
+        }
+      },
+      "zones": []
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2023-11-01",
+      "name": "[variables('loadBalancerName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "[variables('frontendIpConfigName')]",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              }
+            },
+            "zones": []
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "[variables('backendPoolName')]"
+          }
+        ],
+        "probes": [
+          {
+            "name": "[variables('healthProbeName')]",
+            "properties": {
+              "protocol": "Tcp",
+              "port": 80,
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "probeThreshold": 1
+            }
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "[variables('loadBalancingRuleName')]",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', variables('loadBalancerName'), variables('frontendIpConfigName'))]"
+              },
+              "backendAddressPool": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('loadBalancerName'), variables('backendPoolName'))]"
+              },
+              "probe": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', variables('loadBalancerName'), variables('healthProbeName'))]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 80,
+              "backendPort": 80,
+              "enableFloatingIP": false,
+              "enableTcpReset": true,
+              "idleTimeoutInMinutes": 15,
+              "loadDistribution": "Default",
+              "disableOutboundSnat": true
+            }
+          }
+        ],
+        "outboundRules": [
+          {
+            "name": "[variables('outboundRuleName')]",
+            "properties": {
+              "frontendIPConfigurations": [
+                {
+                  "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', variables('loadBalancerName'), variables('frontendIpConfigName'))]"
+                }
+              ],
+              "backendAddressPool": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('loadBalancerName'), variables('backendPoolName'))]"
+              },
+              "protocol": "All",
+              "enableTcpReset": true,
+              "idleTimeoutInMinutes": 15,
+              "allocatedOutboundPorts": "[variables('outboundPortsPerInstance')]"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "loadBalancerId": {
+      "type": "string",
+      "metadata": {
+        "description": "Load Balancer resource ID"
+      },
+      "value": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]"
+    },
+    "loadBalancerName": {
+      "type": "string",
+      "metadata": {
+        "description": "Load Balancer name"
+      },
+      "value": "[variables('loadBalancerName')]"
+    },
+    "publicIpAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Public IP address (FQDN)"
+      },
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2023-11-01').ipAddress]"
+    },
+    "publicIpFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "Public IP FQDN"
+      },
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2023-11-01').dnsSettings.fqdn]"
+    },
+    "frontendIpConfigId": {
+      "type": "string",
+      "metadata": {
+        "description": "Frontend IP configuration ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '2023-11-01').frontendIPConfigurations[0].id]"
+    },
+    "backendPoolId": {
+      "type": "string",
+      "metadata": {
+        "description": "Backend pool ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '2023-11-01').backendAddressPools[0].id]"
+    },
+    "healthProbeId": {
+      "type": "string",
+      "metadata": {
+        "description": "Health probe ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '2023-11-01').probes[0].id]"
+    }
+  }
+}

@@ -1,0 +1,964 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "16875797095617310682"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "swedencentral",
+      "metadata": {
+        "description": "Azure region for all resources"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "test",
+      "allowedValues": [
+        "test",
+        "dev",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name (used in resource naming)"
+      }
+    },
+    "workloadName": {
+      "type": "string",
+      "defaultValue": "lbvm",
+      "metadata": {
+        "description": "Workload name (used in resource naming)"
+      }
+    },
+    "vmSku": {
+      "type": "string",
+      "defaultValue": "Standard_B2ats_v2",
+      "metadata": {
+        "description": "Virtual machine SKU"
+      }
+    },
+    "vmCount": {
+      "type": "int",
+      "defaultValue": 2,
+      "minValue": 2,
+      "maxValue": 10,
+      "metadata": {
+        "description": "Number of VMs to deploy"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "VM admin username"
+      }
+    },
+    "sshPublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key for VM authentication"
+      }
+    },
+    "vnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/16",
+      "metadata": {
+        "description": "Virtual network address prefix"
+      }
+    },
+    "subnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.1.0/24",
+      "metadata": {
+        "description": "Subnet address prefix"
+      }
+    },
+    "osImageReference": {
+      "type": "object",
+      "defaultValue": {
+        "publisher": "Canonical",
+        "offer": "0001-com-ubuntu-server-jammy",
+        "sku": "22_04-lts-gen2",
+        "version": "latest"
+      },
+      "metadata": {
+        "description": "Ubuntu OS image configuration"
+      }
+    },
+    "osDiskSizeGB": {
+      "type": "int",
+      "defaultValue": 30,
+      "metadata": {
+        "description": "OS disk size in GB"
+      }
+    },
+    "availabilityZones": {
+      "type": "array",
+      "defaultValue": [
+        "1",
+        "2"
+      ],
+      "metadata": {
+        "description": "Availability zones for VM deployment"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "Environment": "[parameters('environment')]",
+        "Workload": "[parameters('workloadName')]",
+        "ManagedBy": "Bicep",
+        "CostCenter": "Test"
+      },
+      "metadata": {
+        "description": "Tags to apply to all resources"
+      }
+    }
+  },
+  "variables": {
+    "resourceGroupName": "[resourceGroup().name]",
+    "deploymentId": "[uniqueString(variables('resourceGroupName'), deployment().name)]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-network-{0}', variables('deploymentId'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workloadName": {
+            "value": "[parameters('workloadName')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "vnetAddressPrefix": {
+            "value": "[parameters('vnetAddressPrefix')]"
+          },
+          "subnetAddressPrefix": {
+            "value": "[parameters('subnetAddressPrefix')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "8535315615657369348"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for network resources"
+              }
+            },
+            "workloadName": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload name for resource naming"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name for resource naming"
+              }
+            },
+            "vnetAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network address prefix"
+              }
+            },
+            "subnetAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet address prefix"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Resource tags"
+              }
+            }
+          },
+          "variables": {
+            "vnetName": "[format('vnet-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+            "subnetName": "snet-vms",
+            "nsgName": "[format('nsg-{0}-vms', parameters('workloadName'))]",
+            "azureLoadBalancerProbeIp": "168.63.129.16"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('nsgName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "AllowHTTPInbound",
+                    "properties": {
+                      "description": "Allow HTTP traffic from Internet to VMs",
+                      "protocol": "Tcp",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "80",
+                      "sourceAddressPrefix": "Internet",
+                      "destinationAddressPrefix": "[parameters('subnetAddressPrefix')]",
+                      "access": "Allow",
+                      "priority": 100,
+                      "direction": "Inbound"
+                    }
+                  },
+                  {
+                    "name": "AllowAzureLoadBalancerInbound",
+                    "properties": {
+                      "description": "Allow Azure Load Balancer health probes (required)",
+                      "protocol": "*",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "*",
+                      "sourceAddressPrefix": "AzureLoadBalancer",
+                      "destinationAddressPrefix": "*",
+                      "access": "Allow",
+                      "priority": 110,
+                      "direction": "Inbound"
+                    }
+                  },
+                  {
+                    "name": "DenyAllInbound",
+                    "properties": {
+                      "description": "Deny all other inbound traffic",
+                      "protocol": "*",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "*",
+                      "sourceAddressPrefix": "*",
+                      "destinationAddressPrefix": "*",
+                      "access": "Deny",
+                      "priority": 4096,
+                      "direction": "Inbound"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('vnetName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('vnetAddressPrefix')]"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "[variables('subnetName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('subnetAddressPrefix')]",
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+                      },
+                      "privateEndpointNetworkPolicies": "Disabled",
+                      "privateLinkServiceNetworkPolicies": "Enabled"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual Network resource ID"
+              },
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual Network name"
+              },
+              "value": "[variables('vnetName')]"
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID"
+              },
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2023-11-01').subnets[0].id]"
+            },
+            "subnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet name"
+              },
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2023-11-01').subnets[0].name]"
+            },
+            "nsgId": {
+              "type": "string",
+              "metadata": {
+                "description": "Network Security Group resource ID"
+              },
+              "value": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+            },
+            "nsgName": {
+              "type": "string",
+              "metadata": {
+                "description": "Network Security Group name"
+              },
+              "value": "[variables('nsgName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-loadbalancer-{0}', variables('deploymentId'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workloadName": {
+            "value": "[parameters('workloadName')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "vmCount": {
+            "value": "[parameters('vmCount')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "18415742590275236900"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for load balancer resources"
+              }
+            },
+            "workloadName": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload name for resource naming"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name for resource naming"
+              }
+            },
+            "vmCount": {
+              "type": "int",
+              "metadata": {
+                "description": "Number of VMs in backend pool (for outbound SNAT port calculation)"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Resource tags"
+              }
+            }
+          },
+          "variables": {
+            "publicIpName": "[format('pip-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+            "loadBalancerName": "[format('lb-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+            "frontendIpConfigName": "frontend-ip",
+            "backendPoolName": "backend-pool",
+            "healthProbeName": "health-probe-http",
+            "loadBalancingRuleName": "lb-rule-http",
+            "outboundRuleName": "outbound-rule",
+            "outboundPortsPerInstance": 1024
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('publicIpName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static",
+                "publicIPAddressVersion": "IPv4",
+                "idleTimeoutInMinutes": 4,
+                "dnsSettings": {
+                  "domainNameLabel": "[format('{0}-{1}-{2}', parameters('workloadName'), parameters('environment'), uniqueString(resourceGroup().id))]"
+                }
+              },
+              "zones": []
+            },
+            {
+              "type": "Microsoft.Network/loadBalancers",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('loadBalancerName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+              },
+              "properties": {
+                "frontendIPConfigurations": [
+                  {
+                    "name": "[variables('frontendIpConfigName')]",
+                    "properties": {
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+                      }
+                    },
+                    "zones": []
+                  }
+                ],
+                "backendAddressPools": [
+                  {
+                    "name": "[variables('backendPoolName')]"
+                  }
+                ],
+                "probes": [
+                  {
+                    "name": "[variables('healthProbeName')]",
+                    "properties": {
+                      "protocol": "Tcp",
+                      "port": 80,
+                      "intervalInSeconds": 5,
+                      "numberOfProbes": 2,
+                      "probeThreshold": 1
+                    }
+                  }
+                ],
+                "loadBalancingRules": [
+                  {
+                    "name": "[variables('loadBalancingRuleName')]",
+                    "properties": {
+                      "frontendIPConfiguration": {
+                        "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', variables('loadBalancerName'), variables('frontendIpConfigName'))]"
+                      },
+                      "backendAddressPool": {
+                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('loadBalancerName'), variables('backendPoolName'))]"
+                      },
+                      "probe": {
+                        "id": "[resourceId('Microsoft.Network/loadBalancers/probes', variables('loadBalancerName'), variables('healthProbeName'))]"
+                      },
+                      "protocol": "Tcp",
+                      "frontendPort": 80,
+                      "backendPort": 80,
+                      "enableFloatingIP": false,
+                      "enableTcpReset": true,
+                      "idleTimeoutInMinutes": 15,
+                      "loadDistribution": "Default",
+                      "disableOutboundSnat": true
+                    }
+                  }
+                ],
+                "outboundRules": [
+                  {
+                    "name": "[variables('outboundRuleName')]",
+                    "properties": {
+                      "frontendIPConfigurations": [
+                        {
+                          "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', variables('loadBalancerName'), variables('frontendIpConfigName'))]"
+                        }
+                      ],
+                      "backendAddressPool": {
+                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('loadBalancerName'), variables('backendPoolName'))]"
+                      },
+                      "protocol": "All",
+                      "enableTcpReset": true,
+                      "idleTimeoutInMinutes": 15,
+                      "allocatedOutboundPorts": "[variables('outboundPortsPerInstance')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "loadBalancerId": {
+              "type": "string",
+              "metadata": {
+                "description": "Load Balancer resource ID"
+              },
+              "value": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]"
+            },
+            "loadBalancerName": {
+              "type": "string",
+              "metadata": {
+                "description": "Load Balancer name"
+              },
+              "value": "[variables('loadBalancerName')]"
+            },
+            "publicIpAddress": {
+              "type": "string",
+              "metadata": {
+                "description": "Public IP address (FQDN)"
+              },
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2023-11-01').ipAddress]"
+            },
+            "publicIpFqdn": {
+              "type": "string",
+              "metadata": {
+                "description": "Public IP FQDN"
+              },
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName')), '2023-11-01').dnsSettings.fqdn]"
+            },
+            "frontendIpConfigId": {
+              "type": "string",
+              "metadata": {
+                "description": "Frontend IP configuration ID"
+              },
+              "value": "[reference(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '2023-11-01').frontendIPConfigurations[0].id]"
+            },
+            "backendPoolId": {
+              "type": "string",
+              "metadata": {
+                "description": "Backend pool ID"
+              },
+              "value": "[reference(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '2023-11-01').backendAddressPools[0].id]"
+            },
+            "healthProbeId": {
+              "type": "string",
+              "metadata": {
+                "description": "Health probe ID"
+              },
+              "value": "[reference(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName')), '2023-11-01').probes[0].id]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('deploy-vms-{0}', variables('deploymentId'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workloadName": {
+            "value": "[parameters('workloadName')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "vmSku": {
+            "value": "[parameters('vmSku')]"
+          },
+          "vmCount": {
+            "value": "[parameters('vmCount')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "sshPublicKey": {
+            "value": "[parameters('sshPublicKey')]"
+          },
+          "subnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-network-{0}', variables('deploymentId'))), '2025-04-01').outputs.subnetId.value]"
+          },
+          "loadBalancerBackendPoolId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-loadbalancer-{0}', variables('deploymentId'))), '2025-04-01').outputs.backendPoolId.value]"
+          },
+          "osImageReference": {
+            "value": "[parameters('osImageReference')]"
+          },
+          "osDiskSizeGB": {
+            "value": "[parameters('osDiskSizeGB')]"
+          },
+          "availabilityZones": {
+            "value": "[parameters('availabilityZones')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "14845402224897477447"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for VM resources"
+              }
+            },
+            "workloadName": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload name for resource naming"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name for resource naming"
+              }
+            },
+            "vmSku": {
+              "type": "string",
+              "metadata": {
+                "description": "VM SKU (e.g., Standard_B2ats_v2)"
+              }
+            },
+            "vmCount": {
+              "type": "int",
+              "metadata": {
+                "description": "Number of VMs to deploy"
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "VM admin username"
+              }
+            },
+            "sshPublicKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "SSH public key for authentication"
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID for NIC attachment"
+              }
+            },
+            "loadBalancerBackendPoolId": {
+              "type": "string",
+              "metadata": {
+                "description": "Load Balancer backend pool ID"
+              }
+            },
+            "osImageReference": {
+              "type": "object",
+              "metadata": {
+                "description": "OS image reference"
+              }
+            },
+            "osDiskSizeGB": {
+              "type": "int",
+              "metadata": {
+                "description": "OS disk size in GB"
+              }
+            },
+            "availabilityZones": {
+              "type": "array",
+              "metadata": {
+                "description": "Availability zones for VMs"
+              }
+            },
+            "tags": {
+              "type": "object",
+              "metadata": {
+                "description": "Resource tags"
+              }
+            }
+          },
+          "variables": {
+            "vmNamePrefix": "[format('vm-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+            "nicNamePrefix": "[format('nic-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+            "osDiskNamePrefix": "[format('osdisk-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+            "customData": "[base64('#cloud-config\npackage_update: true\npackage_upgrade: true\npackages:\n  - nginx\nruncmd:\n  - systemctl enable nginx\n  - systemctl start nginx\n  - HOSTNAME=$(hostname)\n  - echo \"<html><head><title>$HOSTNAME</title></head><body><h1>Hello from $HOSTNAME</h1><p>This VM is part of the load-balanced backend pool.</p><p>Zone: $(curl -s -H Metadata:true \"http://169.254.169.254/metadata/instance/compute/zone?api-version=2021-02-01&format=text\")</p></body></html>\" > /var/www/html/index.html\n  - systemctl reload nginx\n')]"
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "nic",
+                "count": "[length(range(0, parameters('vmCount')))]"
+              },
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[copyIndex()], 1), 2, '0'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[parameters('subnetId')]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic",
+                      "loadBalancerBackendAddressPools": [
+                        {
+                          "id": "[parameters('loadBalancerBackendPoolId')]"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "enableAcceleratedNetworking": false,
+                "enableIPForwarding": false
+              }
+            },
+            {
+              "copy": {
+                "name": "vm",
+                "count": "[length(range(0, parameters('vmCount')))]"
+              },
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}-{1}', variables('vmNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[copyIndex()], 1), 2, '0'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "zones": [
+                "[parameters('availabilityZones')[mod(range(0, parameters('vmCount'))[copyIndex()], length(parameters('availabilityZones')))]]"
+              ],
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "[parameters('vmSku')]"
+                },
+                "storageProfile": {
+                  "imageReference": "[parameters('osImageReference')]",
+                  "osDisk": {
+                    "name": "[format('{0}-{1}', variables('osDiskNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[copyIndex()], 1), 2, '0'))]",
+                    "createOption": "FromImage",
+                    "diskSizeGB": "[parameters('osDiskSizeGB')]",
+                    "managedDisk": {
+                      "storageAccountType": "StandardSSD_LRS"
+                    },
+                    "deleteOption": "Delete",
+                    "caching": "ReadWrite"
+                  }
+                },
+                "osProfile": {
+                  "computerName": "[format('{0}-{1}', variables('vmNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[copyIndex()], 1), 2, '0'))]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "customData": "[variables('customData')]",
+                  "linuxConfiguration": {
+                    "disablePasswordAuthentication": true,
+                    "ssh": {
+                      "publicKeys": [
+                        {
+                          "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                          "keyData": "[parameters('sshPublicKey')]"
+                        }
+                      ]
+                    },
+                    "provisionVMAgent": true,
+                    "patchSettings": {
+                      "patchMode": "ImageDefault",
+                      "assessmentMode": "ImageDefault"
+                    }
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0')))]",
+                      "properties": {
+                        "deleteOption": "Delete"
+                      }
+                    }
+                  ]
+                },
+                "diagnosticsProfile": {
+                  "bootDiagnostics": {
+                    "enabled": true,
+                    "storageUri": null
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmIds": {
+              "type": "array",
+              "metadata": {
+                "description": "VM resource IDs"
+              },
+              "copy": {
+                "count": "[length(range(0, parameters('vmCount')))]",
+                "input": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}-{1}', variables('vmNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0')))]"
+              }
+            },
+            "vmNames": {
+              "type": "array",
+              "metadata": {
+                "description": "VM names"
+              },
+              "copy": {
+                "count": "[length(range(0, parameters('vmCount')))]",
+                "input": "[format('{0}-{1}', variables('vmNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0'))]"
+              }
+            },
+            "vmPrivateIps": {
+              "type": "array",
+              "metadata": {
+                "description": "VM private IP addresses"
+              },
+              "copy": {
+                "count": "[length(range(0, parameters('vmCount')))]",
+                "input": "[reference(resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0'))), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]"
+              }
+            },
+            "nicIds": {
+              "type": "array",
+              "metadata": {
+                "description": "NIC resource IDs"
+              },
+              "copy": {
+                "count": "[length(range(0, parameters('vmCount')))]",
+                "input": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0')))]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-loadbalancer-{0}', variables('deploymentId')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('deploy-network-{0}', variables('deploymentId')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "loadBalancerPublicIp": {
+      "type": "string",
+      "metadata": {
+        "description": "Public IP address of the Load Balancer"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-loadbalancer-{0}', variables('deploymentId'))), '2025-04-01').outputs.publicIpAddress.value]"
+    },
+    "loadBalancerFrontendIpConfigId": {
+      "type": "string",
+      "metadata": {
+        "description": "Load Balancer frontend IP configuration ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-loadbalancer-{0}', variables('deploymentId'))), '2025-04-01').outputs.frontendIpConfigId.value]"
+    },
+    "loadBalancerBackendPoolId": {
+      "type": "string",
+      "metadata": {
+        "description": "Load Balancer backend pool ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-loadbalancer-{0}', variables('deploymentId'))), '2025-04-01').outputs.backendPoolId.value]"
+    },
+    "vnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual Network ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-network-{0}', variables('deploymentId'))), '2025-04-01').outputs.vnetId.value]"
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-network-{0}', variables('deploymentId'))), '2025-04-01').outputs.subnetId.value]"
+    },
+    "nsgId": {
+      "type": "string",
+      "metadata": {
+        "description": "Network Security Group ID"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-network-{0}', variables('deploymentId'))), '2025-04-01').outputs.nsgId.value]"
+    },
+    "vmIds": {
+      "type": "array",
+      "metadata": {
+        "description": "VM resource IDs"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-vms-{0}', variables('deploymentId'))), '2025-04-01').outputs.vmIds.value]"
+    },
+    "vmNames": {
+      "type": "array",
+      "metadata": {
+        "description": "VM names"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-vms-{0}', variables('deploymentId'))), '2025-04-01').outputs.vmNames.value]"
+    },
+    "vmPrivateIps": {
+      "type": "array",
+      "metadata": {
+        "description": "VM private IP addresses"
+      },
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('deploy-vms-{0}', variables('deploymentId'))), '2025-04-01').outputs.vmPrivateIps.value]"
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource group name"
+      },
+      "value": "[variables('resourceGroupName')]"
+    },
+    "deploymentLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "Deployment location"
+      },
+      "value": "[parameters('location')]"
+    }
+  }
+}

@@ -1,0 +1,244 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "14845402224897477447"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for VM resources"
+      }
+    },
+    "workloadName": {
+      "type": "string",
+      "metadata": {
+        "description": "Workload name for resource naming"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment name for resource naming"
+      }
+    },
+    "vmSku": {
+      "type": "string",
+      "metadata": {
+        "description": "VM SKU (e.g., Standard_B2ats_v2)"
+      }
+    },
+    "vmCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Number of VMs to deploy"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "VM admin username"
+      }
+    },
+    "sshPublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key for authentication"
+      }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet resource ID for NIC attachment"
+      }
+    },
+    "loadBalancerBackendPoolId": {
+      "type": "string",
+      "metadata": {
+        "description": "Load Balancer backend pool ID"
+      }
+    },
+    "osImageReference": {
+      "type": "object",
+      "metadata": {
+        "description": "OS image reference"
+      }
+    },
+    "osDiskSizeGB": {
+      "type": "int",
+      "metadata": {
+        "description": "OS disk size in GB"
+      }
+    },
+    "availabilityZones": {
+      "type": "array",
+      "metadata": {
+        "description": "Availability zones for VMs"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "metadata": {
+        "description": "Resource tags"
+      }
+    }
+  },
+  "variables": {
+    "vmNamePrefix": "[format('vm-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+    "nicNamePrefix": "[format('nic-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+    "osDiskNamePrefix": "[format('osdisk-{0}-{1}', parameters('workloadName'), parameters('environment'))]",
+    "customData": "[base64('#cloud-config\npackage_update: true\npackage_upgrade: true\npackages:\n  - nginx\nruncmd:\n  - systemctl enable nginx\n  - systemctl start nginx\n  - HOSTNAME=$(hostname)\n  - echo \"<html><head><title>$HOSTNAME</title></head><body><h1>Hello from $HOSTNAME</h1><p>This VM is part of the load-balanced backend pool.</p><p>Zone: $(curl -s -H Metadata:true \"http://169.254.169.254/metadata/instance/compute/zone?api-version=2021-02-01&format=text\")</p></body></html>\" > /var/www/html/index.html\n  - systemctl reload nginx\n')]"
+  },
+  "resources": [
+    {
+      "copy": {
+        "name": "nic",
+        "count": "[length(range(0, parameters('vmCount')))]"
+      },
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[copyIndex()], 1), 2, '0'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[parameters('subnetId')]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[parameters('loadBalancerBackendPoolId')]"
+                }
+              ]
+            }
+          }
+        ],
+        "enableAcceleratedNetworking": false,
+        "enableIPForwarding": false
+      }
+    },
+    {
+      "copy": {
+        "name": "vm",
+        "count": "[length(range(0, parameters('vmCount')))]"
+      },
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}-{1}', variables('vmNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[copyIndex()], 1), 2, '0'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "zones": [
+        "[parameters('availabilityZones')[mod(range(0, parameters('vmCount'))[copyIndex()], length(parameters('availabilityZones')))]]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSku')]"
+        },
+        "storageProfile": {
+          "imageReference": "[parameters('osImageReference')]",
+          "osDisk": {
+            "name": "[format('{0}-{1}', variables('osDiskNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[copyIndex()], 1), 2, '0'))]",
+            "createOption": "FromImage",
+            "diskSizeGB": "[parameters('osDiskSizeGB')]",
+            "managedDisk": {
+              "storageAccountType": "StandardSSD_LRS"
+            },
+            "deleteOption": "Delete",
+            "caching": "ReadWrite"
+          }
+        },
+        "osProfile": {
+          "computerName": "[format('{0}-{1}', variables('vmNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[copyIndex()], 1), 2, '0'))]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "customData": "[variables('customData')]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                  "keyData": "[parameters('sshPublicKey')]"
+                }
+              ]
+            },
+            "provisionVMAgent": true,
+            "patchSettings": {
+              "patchMode": "ImageDefault",
+              "assessmentMode": "ImageDefault"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0')))]",
+              "properties": {
+                "deleteOption": "Delete"
+              }
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": null
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "vmIds": {
+      "type": "array",
+      "metadata": {
+        "description": "VM resource IDs"
+      },
+      "copy": {
+        "count": "[length(range(0, parameters('vmCount')))]",
+        "input": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}-{1}', variables('vmNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0')))]"
+      }
+    },
+    "vmNames": {
+      "type": "array",
+      "metadata": {
+        "description": "VM names"
+      },
+      "copy": {
+        "count": "[length(range(0, parameters('vmCount')))]",
+        "input": "[format('{0}-{1}', variables('vmNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0'))]"
+      }
+    },
+    "vmPrivateIps": {
+      "type": "array",
+      "metadata": {
+        "description": "VM private IP addresses"
+      },
+      "copy": {
+        "count": "[length(range(0, parameters('vmCount')))]",
+        "input": "[reference(resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0'))), '2023-11-01').ipConfigurations[0].properties.privateIPAddress]"
+      }
+    },
+    "nicIds": {
+      "type": "array",
+      "metadata": {
+        "description": "NIC resource IDs"
+      },
+      "copy": {
+        "count": "[length(range(0, parameters('vmCount')))]",
+        "input": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}', variables('nicNamePrefix'), padLeft(add(range(0, parameters('vmCount'))[range(0, parameters('vmCount'))[copyIndex()]], 1), 2, '0')))]"
+      }
+    }
+  }
+}
